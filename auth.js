@@ -6,7 +6,7 @@
   'use strict';
 
   // ── Check if already logged in ──────────────────────
-  supabase.auth.getSession().then(({ data }) => {
+  supabaseClient.auth.getSession().then(({ data }) => {
     if (data.session) {
       window.location.href = 'app.html';
     }
@@ -72,7 +72,7 @@
     const email    = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     setLoading(loginForm, true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     setLoading(loginForm, false);
     if (error) {
       showErr(loginErr, error.message.includes('Invalid') ? 'Incorrect email or password.' : error.message);
@@ -89,7 +89,7 @@
     const email    = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
     setLoading(signupForm, true);
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseClient.auth.signUp({
       email, password,
       options: { data: { display_name: name } }
     });

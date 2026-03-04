@@ -8,7 +8,7 @@ let currentUser = null;
 let currentSession = null;
 
 async function initApp() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { window.location.href = 'index.html'; return; }
   currentSession = session;
   currentUser = session.user;
@@ -63,7 +63,7 @@ document.querySelectorAll('.nav-link').forEach(link => {
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   window.location.href = 'index.html';
 });
 
@@ -122,13 +122,13 @@ function contrastColor(hex) {
 let _dogs = null;
 async function getDogs(force = false) {
   if (_dogs && !force) return _dogs;
-  const { data, error } = await supabase.from('dogs').select('*').eq('user_id', currentUser.id).order('name');
+  const { data, error } = await supabaseClient.from('dogs').select('*').eq('user_id', currentUser.id).order('name');
   if (error) { console.error(error); return []; }
   _dogs = data || [];
   return _dogs;
 }
 async function getWalks(dogId = null) {
-  let q = supabase.from('walks').select('*').eq('user_id', currentUser.id).order('started_at', { ascending: false });
+  let q = supabaseClient.from('walks').select('*').eq('user_id', currentUser.id).order('started_at', { ascending: false });
   if (dogId) q = q.eq('dog_id', dogId);
   const { data, error } = await q;
   if (error) { console.error(error); return []; }
@@ -294,9 +294,9 @@ document.getElementById('dog-form').addEventListener('submit', async (e) => {
   };
   let error;
   if (id) {
-    ({ error } = await supabase.from('dogs').update(payload).eq('id', id));
+    ({ error } = await supabaseClient.from('dogs').update(payload).eq('id', id));
   } else {
-    ({ error } = await supabase.from('dogs').insert(payload));
+    ({ error } = await supabaseClient.from('dogs').insert(payload));
   }
   if (error) { toast('Error saving dog: ' + error.message); return; }
   _dogs = null;
@@ -377,7 +377,7 @@ async function openDogDetail(dog, walks) {
   };
   document.getElementById('dd-delete-btn').onclick = async () => {
     if (!confirm(`Delete ${dog.name} and all their walks? This cannot be undone.`)) return;
-    await supabase.from('dogs').delete().eq('id', dog.id);
+    await supabaseClient.from('dogs').delete().eq('id', dog.id);
     _dogs = null;
     closeDogDetail();
     toast('Dog removed 🐾');
@@ -523,7 +523,7 @@ document.getElementById('finish-walk-btn').addEventListener('click', async () =>
   stopWalkTracking();
 
   const notes = document.getElementById('walk-notes-input').value.trim();
-  const { error } = await supabase.from('walks').insert({
+  const { error } = await supabaseClient.from('walks').insert({
     user_id: currentUser.id,
     dog_id: walkState.dogId,
     started_at: walkState.startedAt.toISOString(),
@@ -581,7 +581,7 @@ async function loadCalendar() {
   // Fetch walks in this month
   const start = new Date(year, month, 1).toISOString();
   const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
-  const { data: walks } = await supabase.from('walks').select('*')
+  const { data: walks } = await supabaseClient.from('walks').select('*')
     .eq('user_id', currentUser.id)
     .gte('started_at', start).lte('started_at', end);
 
@@ -773,7 +773,7 @@ function openWalkModal(walk, dogs) {
 
   document.getElementById('wm-delete-btn').onclick = async () => {
     if (!confirm('Delete this walk?')) return;
-    await supabase.from('walks').delete().eq('id', walk.id);
+    await supabaseClient.from('walks').delete().eq('id', walk.id);
     closeWalkModal();
     toast('Walk deleted.');
     await loadHistory();

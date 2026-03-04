@@ -14,4 +14,4 @@ const SUPABASE_ANON_KEY = 'sb_publishable_pD9lyGCKbIIsXCWkzhw-UA_HRtYuM_t';
 // ======================================================
 // DO NOT EDIT BELOW THIS LINE
 // ======================================================
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

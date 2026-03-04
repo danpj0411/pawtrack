@@ -381,6 +381,7 @@ async function openDogDetail(dog, walks) {
 }
 function closeDogDetail() { document.getElementById('dog-detail-modal').classList.add('hidden'); }
 document.getElementById('dog-detail-close').addEventListener('click', closeDogDetail);
+document.getElementById('dog-detail-close-btn').addEventListener('click', closeDogDetail);
 document.getElementById('dog-detail-backdrop').addEventListener('click', closeDogDetail);
 
 function populate_breed_datalist() {
@@ -662,6 +663,7 @@ function openDayModal(d, month, year, walks, dogs) {
 }
 function closeDayModal() { document.getElementById('day-modal').classList.add('hidden'); }
 document.getElementById('day-modal-close').addEventListener('click', closeDayModal);
+document.getElementById('day-modal-close-btn').addEventListener('click', closeDayModal);
 document.getElementById('day-modal-backdrop').addEventListener('click', closeDayModal);
 
 // ── HISTORY ────────────────────────────────────────────────
@@ -778,6 +780,7 @@ function openWalkModal(walk, dogs) {
 }
 function closeWalkModal() { document.getElementById('walk-modal').classList.add('hidden'); }
 document.getElementById('walk-modal-close').addEventListener('click', closeWalkModal);
+document.getElementById('walk-modal-close-btn').addEventListener('click', closeWalkModal);
 document.getElementById('walk-modal-backdrop').addEventListener('click', closeWalkModal);
 
 // ── INIT ───────────────────────────────────────────────────

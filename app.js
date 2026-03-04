@@ -146,7 +146,7 @@ async function loadDashboard() {
   document.getElementById('stat-dogs').textContent = dogs.length;
   document.getElementById('stat-walks').textContent = walks.length;
   document.getElementById('stat-time').textContent = fmtDuration(Math.round(totalMins));
-  document.getElementById('stat-dist').textContent = fmtDist(totalDist);
+  document.getElementById('stat-week').textContent = recentWalks.length + ' walks';
 
   // recent walks list (last 5)
   const list = document.getElementById('recent-walks-list');
@@ -174,17 +174,10 @@ async function loadDashboard() {
     });
   }
 
-  // quick-start dog selector
-  populateDogSelect('quick-dog-select', dogs);
 }
 
-document.getElementById('quick-start-btn').addEventListener('click', () => {
-  const dogId = document.getElementById('quick-dog-select').value;
-  if (!dogId) { toast('Pick a dog first!'); return; }
-  navigate('walk').then(() => {
-    document.getElementById('walk-dog-select').value = dogId;
-  });
-});
+document.getElementById('quick-walk-btn').addEventListener('click', () => navigate('walk'));
+document.getElementById('quick-dog-btn').addEventListener('click', () => openDogModal());
 
 // ── DOGS SECTION ───────────────────────────────────────────
 async function loadDogs() {

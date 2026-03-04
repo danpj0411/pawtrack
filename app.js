@@ -315,7 +315,7 @@ document.getElementById('dog-form').addEventListener('submit', async (e) => {
   _dogs = null;
   closeDogModal();
   toast(id ? 'Dog updated! 🐾' : 'Dog added! 🎉');
-  await loadDogs();
+  await Promise.all([loadDogs(), loadDashboard()]);
 });
 
 async function openDogDetail(dog, walks) {
@@ -394,7 +394,7 @@ async function openDogDetail(dog, walks) {
     _dogs = null;
     closeDogDetail();
     toast('Dog removed 🐾');
-    await loadDogs();
+    await Promise.all([loadDogs(), loadDashboard()]);
   };
 
   modal.classList.remove('hidden');
@@ -863,10 +863,12 @@ async function loadHistory() {
         <div class="history-info">
           <div class="history-dog">${dog?.name || 'Unknown'}</div>
           <div class="history-meta">${fmtTime(w.started_at)}${w.notes ? ' · ' + w.notes.slice(0, 40) : ''}</div>
+          ${w.route && w.route.length > 1 ? '<div class="walk-has-route">📍 Route recorded</div>' : ''}
         </div>
         <div class="history-right">
           <div class="history-dur">${fmtDuration(w.duration_seconds)}</div>
           <div class="history-dist">${fmtDist(w.distance_meters)}</div>
+          ${w.steps_count ? `<div class="history-steps">${w.steps_count.toLocaleString()} steps</div>` : ''}
         </div>`;
       card.addEventListener('click', () => openWalkModal(w, dogs));
       g.appendChild(card);
@@ -893,40 +895,45 @@ function openWalkModal(walk, dogs) {
   document.getElementById('wm-notes').textContent = walk.notes || '—';
 
   const mapEl = document.getElementById('walk-detail-map');
-  const hasRoute = walk.route && walk.route.length > 1;
+  const noRouteEl = document.getElementById('wm-no-route');
+  // Normalise route — Supabase returns JSONB as a JS array already
+  const route = Array.isArray(walk.route) ? walk.route : [];
+  const hasRoute = route.length > 1;
 
   // Always destroy previous map instance so each walk shows its own route
   if (walkDetailMap) { walkDetailMap.remove(); walkDetailMap = null; walkDetailPolyline = null; }
 
   if (hasRoute) {
     mapEl.classList.remove('hidden');
+    if (noRouteEl) noRouteEl.classList.add('hidden');
+    // Show modal first, then init map so the container has real dimensions
     setTimeout(() => {
-      walkDetailMap = L.map(mapEl).setView(walk.route[0], 15);
+      walkDetailMap = L.map(mapEl, { zoomControl: true }).setView(route[0], 15);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap', maxZoom: 19,
       }).addTo(walkDetailMap);
-      walkDetailPolyline = L.polyline(walk.route, { color: '#2e7d32', weight: 5, opacity: 0.9 }).addTo(walkDetailMap);
+      walkDetailPolyline = L.polyline(route, { color: '#2e7d32', weight: 5, opacity: 0.9 }).addTo(walkDetailMap);
 
-      // Start marker (green S)
       const startIcon = L.divIcon({
         className: '',
         html: '<div style="background:#2e7d32;color:#fff;border:2px solid #fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:0 2px 8px rgba(0,0,0,0.3)">S</div>',
         iconSize: [22, 22], iconAnchor: [11, 11],
       });
-      // Finish marker (red F)
       const finishIcon = L.divIcon({
         className: '',
         html: '<div style="background:#c62828;color:#fff;border:2px solid #fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:0 2px 8px rgba(0,0,0,0.3)">F</div>',
         iconSize: [22, 22], iconAnchor: [11, 11],
       });
-      L.marker(walk.route[0], { icon: startIcon }).addTo(walkDetailMap).bindTooltip('Start');
-      L.marker(walk.route[walk.route.length - 1], { icon: finishIcon }).addTo(walkDetailMap).bindTooltip('Finish');
+      L.marker(route[0], { icon: startIcon }).addTo(walkDetailMap).bindTooltip('Start', { permanent: false });
+      L.marker(route[route.length - 1], { icon: finishIcon }).addTo(walkDetailMap).bindTooltip('Finish', { permanent: false });
 
-      walkDetailMap.fitBounds(walkDetailPolyline.getBounds(), { padding: [30, 30] });
-      walkDetailMap.invalidateSize();
-    }, 120);
+      walkDetailMap.fitBounds(walkDetailPolyline.getBounds(), { padding: [32, 32] });
+      // Second invalidate to handle any layout shift after fitBounds
+      setTimeout(() => walkDetailMap && walkDetailMap.invalidateSize(), 80);
+    }, 200);
   } else {
     mapEl.classList.add('hidden');
+    if (noRouteEl) noRouteEl.classList.remove('hidden');
   }
 
   document.getElementById('wm-delete-btn').onclick = async () => {
@@ -934,7 +941,7 @@ function openWalkModal(walk, dogs) {
     await supabaseClient.from('walks').delete().eq('id', walk.id);
     closeWalkModal();
     toast('Walk deleted.');
-    await loadHistory();
+    await Promise.all([loadHistory(), loadDashboard()]);
   };
 
   modal.classList.remove('hidden');

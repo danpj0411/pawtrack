@@ -27,6 +27,7 @@ create table if not exists public.walks (
   duration_seconds integer,
   route            jsonb default '[]'::jsonb,
   distance_meters  numeric(10,2) default 0,
+  steps_count      integer default 0,
   notes            text,
   created_at       timestamptz default now() not null
 );
@@ -39,6 +40,11 @@ create index if not exists walks_started_idx  on public.walks (started_at desc);
 
 -- 4. ROW LEVEL SECURITY — dogs
 alter table public.dogs enable row level security;
+
+drop policy if exists "Users can read own dogs"   on public.dogs;
+drop policy if exists "Users can insert own dogs"  on public.dogs;
+drop policy if exists "Users can update own dogs"  on public.dogs;
+drop policy if exists "Users can delete own dogs"  on public.dogs;
 
 create policy "Users can read own dogs"
   on public.dogs for select
@@ -59,6 +65,11 @@ create policy "Users can delete own dogs"
 -- 5. ROW LEVEL SECURITY — walks
 alter table public.walks enable row level security;
 
+drop policy if exists "Users can read own walks"   on public.walks;
+drop policy if exists "Users can insert own walks"  on public.walks;
+drop policy if exists "Users can update own walks"  on public.walks;
+drop policy if exists "Users can delete own walks"  on public.walks;
+
 create policy "Users can read own walks"
   on public.walks for select
   using (auth.uid() = user_id);
@@ -74,3 +85,10 @@ create policy "Users can update own walks"
 create policy "Users can delete own walks"
   on public.walks for delete
   using (auth.uid() = user_id);
+
+-- ============================================================
+-- MIGRATIONS — safe to re-run (adds columns to existing tables)
+-- ============================================================
+alter table public.walks
+  add column if not exists steps_count integer default 0;
+

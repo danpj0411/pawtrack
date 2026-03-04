@@ -323,7 +323,7 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
   border-radius: 10px; margin-bottom: 14px;
 }
 .live-stats {
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 8px; margin-bottom: 14px;
 }
 .live-stat {
@@ -611,11 +611,59 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
   .walk-layout { grid-template-columns: 1fr; }
   #live-map { min-height: 300px; }
   .dashboard-row { flex-direction: column; }
-  .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-grid { grid-template-columns: repeat(3, 1fr); }
 }
-@media (max-width: 600px) {
-  #sidebar { position: fixed; height: 100%; }
+
+/* ── Mobile sidebar ─────────────────────────────────────── */
+#sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 490;
+  transition: opacity 0.25s;
+}
+#sidebar-overlay.visible { display: block; }
+
+@media (max-width: 700px) {
+  #sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 100%;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 500;
+    width: 240px !important;
+    min-width: 240px !important;
+  }
+  #sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+  }
+  /* Collapsed class has no effect on mobile — always full width when open */
+  #sidebar.collapsed { width: 240px !important; min-width: 240px !important; }
+  #sidebar.collapsed .brand-name,
+  #sidebar.collapsed .nav-label,
+  #sidebar.collapsed .user-details { display: block !important; }
+  #sidebar.collapsed .logout-btn { display: flex !important; }
+  #main { margin-left: 0 !important; }
   .section { padding: 14px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .modal-box { margin: 12px; }
+  .walk-layout { grid-template-columns: 1fr; }
+  .live-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Live location marker ───────────────────────────────── */
+.live-location-marker { background: none !important; border: none !important; }
+.loc-dot {
+  width: 20px; height: 20px;
+  background: #1565c0;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 10px rgba(21,101,192,0.5);
+  animation: locPulse 1.8s ease-in-out infinite;
+}
+@keyframes locPulse {
+  0%,100% { transform: scale(1); box-shadow: 0 2px 10px rgba(21,101,192,0.4); }
+  50% { transform: scale(1.25); box-shadow: 0 2px 20px rgba(21,101,192,0.7); }
 }

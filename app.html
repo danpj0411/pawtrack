@@ -2,8 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>PawTracker — Dashboard</title>
+  <meta name="theme-color" content="#2e7d32" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PawTrack" />
+  <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="app.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -11,6 +17,7 @@
 </head>
 <body>
   <div id="app">
+  <div id="sidebar-overlay"></div>
 
     <!-- SIDEBAR -->
     <nav id="sidebar">
@@ -133,8 +140,12 @@
                   <div class="live-stat-lbl">Distance</div>
                 </div>
                 <div class="live-stat">
+                  <div class="live-stat-val" id="live-steps">0</div>
+                  <div class="live-stat-lbl">Steps</div>
+                </div>
+                <div class="live-stat">
                   <div class="live-stat-val" id="live-pts">0</div>
-                  <div class="live-stat-lbl">GPS Points</div>
+                  <div class="live-stat-lbl">GPS pts</div>
                 </div>
               </div>
               <div class="gps-status">
@@ -271,6 +282,7 @@
         <div class="detail-item"><label>Time</label><span id="wm-time"></span></div>
         <div class="detail-item"><label>Duration</label><span id="wm-duration"></span></div>
         <div class="detail-item"><label>Distance</label><span id="wm-distance"></span></div>
+        <div class="detail-item"><label>Steps</label><span id="wm-steps">—</span></div>
       </div>
       <div class="detail-notes" id="wm-notes"></div>
       <div id="walk-detail-map" class="detail-map hidden"></div>
@@ -304,5 +316,10 @@
   <script src="config.js"></script>
   <script src="breeds.js"></script>
   <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>

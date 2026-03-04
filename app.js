@@ -54,12 +54,32 @@ async function navigate(name) {
 }
 
 // ── Sidebar toggle ─────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 700; }
+
+function openMobileSidebar() {
+  document.getElementById('sidebar').classList.add('mobile-open');
+  document.getElementById('sidebar-overlay').classList.add('visible');
+}
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay').classList.remove('visible');
+}
+
 document.getElementById('sidebar-toggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('collapsed');
+  if (isMobile()) {
+    const isOpen = document.getElementById('sidebar').classList.contains('mobile-open');
+    if (isOpen) closeMobileSidebar(); else openMobileSidebar();
+  } else {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  }
 });
+document.getElementById('sidebar-overlay').addEventListener('click', closeMobileSidebar);
 
 document.querySelectorAll('.nav-link').forEach(link => {
-  link.addEventListener('click', () => navigate(link.dataset.section));
+  link.addEventListener('click', () => {
+    navigate(link.dataset.section);
+    if (isMobile()) closeMobileSidebar();
+  });
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -405,9 +425,61 @@ function populateDogSelect(id, dogs) {
 let walkState = {
   active: false, dogId: null,
   startedAt: null, timerInterval: null, watchId: null,
-  route: [], distanceMeters: 0, marker: null,
-  polyline: null, map: null,
+  route: [], distanceMeters: 0, lastPos: null,
+  marker: null, accuracyCircle: null, startMarker: null,
+  polyline: null, map: null, steps: 0,
 };
+
+// ── Wake Lock ──────────────────────────────────────────────
+let wakeLock = null;
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (e) { /* not supported or denied */ }
+  }
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+// Re-acquire wake lock when page becomes visible again (screen was locked briefly)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && walkState.active) requestWakeLock();
+});
+
+// ── Step counter ───────────────────────────────────────────
+let _lastPeakTime = 0;
+function onDeviceMotion(e) {
+  if (!walkState.active) return;
+  const acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc) return;
+  const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+  const now = Date.now();
+  // Simple peak detector: magnitude spike above threshold, min 350ms between steps
+  if (mag > 14.5 && (now - _lastPeakTime) > 350) {
+    _lastPeakTime = now;
+    walkState.steps += 1;
+    const el = document.getElementById('live-steps');
+    if (el) el.textContent = walkState.steps;
+  }
+}
+function startStepCounter() {
+  walkState.steps = 0;
+  _lastPeakTime = 0;
+  if (typeof DeviceMotionEvent === 'undefined') return;
+  if (typeof DeviceMotionEvent.requestPermission === 'function') {
+    // iOS 13+ requires explicit user permission
+    DeviceMotionEvent.requestPermission()
+      .then(s => { if (s === 'granted') window.addEventListener('devicemotion', onDeviceMotion); })
+      .catch(() => {});
+  } else {
+    window.addEventListener('devicemotion', onDeviceMotion);
+  }
+}
+function stopStepCounter() {
+  window.removeEventListener('devicemotion', onDeviceMotion);
+}
 
 async function initWalkSection() {
   const dogs = await getDogs();
@@ -416,20 +488,26 @@ async function initWalkSection() {
 }
 
 function setupWalkMap() {
-  if (walkState.map) return;
+  if (walkState.map) {
+    // Re-center on user's current location whenever they visit the walk section
+    navigator.geolocation?.getCurrentPosition(pos => {
+      if (!walkState.active) {
+        walkState.map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+      }
+    }, () => {}, { enableHighAccuracy: true, timeout: 10000 });
+    return;
+  }
   const mapEl = document.getElementById('live-map');
-  walkState.map = L.map(mapEl, { zoomControl: true }).setView([51.505, -0.09], 15);
+  walkState.map = L.map(mapEl, { zoomControl: true }).setView([20, 0], 2);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
-    maxZoom: 19
+    maxZoom: 19,
   }).addTo(walkState.map);
-  walkState.polyline = L.polyline([], { color: '#2e7d32', weight: 4, opacity: 0.85 }).addTo(walkState.map);
-  // Request location to pan map to user's area
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(pos => {
-      walkState.map.setView([pos.coords.latitude, pos.coords.longitude], 15);
-    }, () => {});
-  }
+  walkState.polyline = L.polyline([], { color: '#2e7d32', weight: 5, opacity: 0.9 }).addTo(walkState.map);
+  // Fly to actual user location immediately
+  navigator.geolocation?.getCurrentPosition(pos => {
+    walkState.map.setView([pos.coords.latitude, pos.coords.longitude], 16, { animate: true });
+  }, () => {}, { enableHighAccuracy: true, timeout: 10000 });
   document.getElementById('map-hint').classList.remove('hidden');
 }
 
@@ -456,7 +534,10 @@ document.getElementById('start-walk-btn').addEventListener('click', async () => 
   walkState.startedAt = new Date();
   walkState.route = [];
   walkState.distanceMeters = 0;
+  walkState.lastPos = null;
+  walkState.steps = 0;
   walkState.polyline.setLatLngs([]);
+  document.getElementById('live-steps').textContent = '0';
 
   document.getElementById('pre-walk-panel').classList.add('hidden');
   document.getElementById('active-walk-panel').classList.remove('hidden');
@@ -468,36 +549,90 @@ document.getElementById('start-walk-btn').addEventListener('click', async () => 
     document.getElementById('live-timer').textContent = fmtDuration(elapsed);
   }, 1000);
 
+  // Start step counter and wake lock
+  startStepCounter();
+  requestWakeLock();
+
+  // Add start-point marker
+  if (walkState.startMarker) { walkState.startMarker.remove(); walkState.startMarker = null; }
+
   // GPS watch
   setGpsStatus('waiting');
   walkState.watchId = navigator.geolocation.watchPosition(
     (pos) => {
       setGpsStatus('active');
-      const lat = pos.coords.latitude, lon = pos.coords.longitude;
-      if (walkState.route.length > 0) {
-        const prev = walkState.route[walkState.route.length - 1];
-        walkState.distanceMeters += haversine(prev[0], prev[1], lat, lon);
-      }
-      walkState.route.push([lat, lon]);
-      walkState.polyline.addLatLng([lat, lon]);
-      walkState.map.panTo([lat, lon]);
+      const { latitude: lat, longitude: lon, accuracy } = pos.coords;
 
-      // Marker
+      // Update accuracy circle (always — even for low-accuracy points)
+      if (walkState.accuracyCircle) {
+        walkState.accuracyCircle.setLatLng([lat, lon]).setRadius(accuracy);
+      } else {
+        walkState.accuracyCircle = L.circle([lat, lon], {
+          radius: accuracy, color: '#1565c0', fillColor: '#1565c0',
+          fillOpacity: 0.08, weight: 1, dashArray: '4',
+        }).addTo(walkState.map);
+      }
+
+      // Place start marker on first good fix
+      if (!walkState.startMarker && accuracy <= 65) {
+        const startIcon = L.divIcon({
+          className: '',
+          html: '<div style="background:#2e7d32;color:#fff;border:2px solid #fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:0 2px 8px rgba(0,0,0,0.3)">S</div>',
+          iconSize: [22, 22], iconAnchor: [11, 11],
+        });
+        walkState.startMarker = L.marker([lat, lon], { icon: startIcon })
+          .addTo(walkState.map).bindTooltip('Start');
+      }
+
+      // Don't add poor-accuracy points to route
+      if (accuracy > 65) {
+        walkState.map.panTo([lat, lon], { animate: true, duration: 0.5 });
+        return;
+      }
+
+      // Distance: accumulate from every good position reading
+      if (walkState.lastPos) {
+        walkState.distanceMeters += haversine(walkState.lastPos[0], walkState.lastPos[1], lat, lon);
+      }
+      walkState.lastPos = [lat, lon];
+
+      // Only add to polyline route if moved ≥ 5m from last route point
+      const lastPt = walkState.route[walkState.route.length - 1];
+      const movedM = lastPt ? haversine(lastPt[0], lastPt[1], lat, lon) : 999;
+      if (movedM >= 5) {
+        walkState.route.push([lat, lon]);
+        walkState.polyline.addLatLng([lat, lon]);
+      }
+
+      walkState.map.panTo([lat, lon], { animate: true, duration: 0.5 });
+
+      // Live location marker (pulsing dot)
+      const locIcon = L.divIcon({ className: 'live-location-marker', html: '<div class="loc-dot"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
       if (!walkState.marker) {
-        const icon = L.divIcon({ className: '', html: '<div style="background:#2e7d32;border:3px solid #fff;border-radius:50%;width:16px;height:16px;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
-        walkState.marker = L.marker([lat, lon], { icon }).addTo(walkState.map);
+        walkState.marker = L.marker([lat, lon], { icon: locIcon, zIndexOffset: 1000 }).addTo(walkState.map);
       } else {
         walkState.marker.setLatLng([lat, lon]);
       }
 
       document.getElementById('live-dist').textContent = fmtDist(walkState.distanceMeters);
       document.getElementById('live-pts').textContent = walkState.route.length;
+
+      // Backup to localStorage so data survives accidental app close
+      try {
+        localStorage.setItem('pawtrack_walk_backup', JSON.stringify({
+          dogId: walkState.dogId,
+          startedAt: walkState.startedAt?.toISOString(),
+          route: walkState.route,
+          distanceMeters: walkState.distanceMeters,
+          steps: walkState.steps,
+        }));
+      } catch (_) {}
     },
     (err) => {
       setGpsStatus('error');
       console.warn('GPS error', err);
     },
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
   );
 });
 
@@ -506,7 +641,7 @@ function setGpsStatus(state) {
   const label = document.getElementById('gps-status-label');
   dot.className = 'gps-dot';
   if (state === 'active') { dot.classList.add('active'); label.textContent = 'GPS active'; }
-  else if (state === 'error') { dot.classList.add('error'); label.textContent = 'GPS error'; }
+  else if (state === 'error') { dot.classList.add('error'); label.textContent = 'GPS error — check permissions'; }
   else { label.textContent = 'Waiting for GPS…'; }
 }
 
@@ -514,6 +649,7 @@ document.getElementById('finish-walk-btn').addEventListener('click', async () =>
   if (!walkState.active) return;
   const finishedAt = new Date();
   const durationSecs = Math.round((finishedAt - walkState.startedAt) / 1000);
+  const savedSteps = walkState.steps;
   stopWalkTracking();
 
   const notes = document.getElementById('walk-notes-input').value.trim();
@@ -525,10 +661,12 @@ document.getElementById('finish-walk-btn').addEventListener('click', async () =>
     duration_seconds: durationSecs,
     route: walkState.route,
     distance_meters: Math.round(walkState.distanceMeters),
+    steps_count: savedSteps,
     notes,
   });
+  localStorage.removeItem('pawtrack_walk_backup');
   if (error) { toast('Error saving walk: ' + error.message); resetWalkUI(); return; }
-  toast(`Walk logged! 🐾 ${fmtDuration(durationSecs)} · ${fmtDist(walkState.distanceMeters)}`);
+  toast(`Walk saved! 🐾 ${fmtDuration(durationSecs)} · ${fmtDist(walkState.distanceMeters)} · ${savedSteps} steps`);
   resetWalkUI();
   await navigate('dashboard');
 });
@@ -536,6 +674,7 @@ document.getElementById('finish-walk-btn').addEventListener('click', async () =>
 document.getElementById('cancel-walk-btn').addEventListener('click', () => {
   if (!confirm('Cancel this walk? Tracking data will be lost.')) return;
   stopWalkTracking();
+  localStorage.removeItem('pawtrack_walk_backup');
   toast('Walk cancelled.');
   resetWalkUI();
 });
@@ -544,17 +683,23 @@ function stopWalkTracking() {
   clearInterval(walkState.timerInterval);
   if (walkState.watchId !== null) navigator.geolocation.clearWatch(walkState.watchId);
   walkState.active = false;
+  stopStepCounter();
+  releaseWakeLock();
   document.getElementById('active-walk-badge').classList.add('hidden');
 }
 
 function resetWalkUI() {
   walkState.dogId = null; walkState.startedAt = null;
   walkState.route = []; walkState.distanceMeters = 0;
+  walkState.lastPos = null; walkState.steps = 0;
   if (walkState.marker) { walkState.marker.remove(); walkState.marker = null; }
+  if (walkState.accuracyCircle) { walkState.accuracyCircle.remove(); walkState.accuracyCircle = null; }
+  if (walkState.startMarker) { walkState.startMarker.remove(); walkState.startMarker = null; }
   if (walkState.polyline) walkState.polyline.setLatLngs([]);
   document.getElementById('live-timer').textContent = '0m 0s';
   document.getElementById('live-dist').textContent = '0 m';
   document.getElementById('live-pts').textContent = '0';
+  document.getElementById('live-steps').textContent = '0';
   document.getElementById('walk-notes-input').value = '';
   document.getElementById('pre-walk-panel').classList.remove('hidden');
   document.getElementById('active-walk-panel').classList.add('hidden');
@@ -744,24 +889,42 @@ function openWalkModal(walk, dogs) {
   document.getElementById('wm-time').textContent = fmtTime(walk.started_at);
   document.getElementById('wm-duration').textContent = fmtDuration(walk.duration_seconds);
   document.getElementById('wm-distance').textContent = fmtDist(walk.distance_meters);
+  document.getElementById('wm-steps').textContent = walk.steps_count ? walk.steps_count.toLocaleString() : '—';
   document.getElementById('wm-notes').textContent = walk.notes || '—';
 
   const mapEl = document.getElementById('walk-detail-map');
   const hasRoute = walk.route && walk.route.length > 1;
 
+  // Always destroy previous map instance so each walk shows its own route
+  if (walkDetailMap) { walkDetailMap.remove(); walkDetailMap = null; walkDetailPolyline = null; }
+
   if (hasRoute) {
     mapEl.classList.remove('hidden');
-    if (!walkDetailMap) {
+    setTimeout(() => {
       walkDetailMap = L.map(mapEl).setView(walk.route[0], 15);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap', maxZoom: 19
+        attribution: '© OpenStreetMap', maxZoom: 19,
       }).addTo(walkDetailMap);
-      walkDetailPolyline = L.polyline([], { color: '#2e7d32', weight: 4 }).addTo(walkDetailMap);
-    } else {
+      walkDetailPolyline = L.polyline(walk.route, { color: '#2e7d32', weight: 5, opacity: 0.9 }).addTo(walkDetailMap);
+
+      // Start marker (green S)
+      const startIcon = L.divIcon({
+        className: '',
+        html: '<div style="background:#2e7d32;color:#fff;border:2px solid #fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:0 2px 8px rgba(0,0,0,0.3)">S</div>',
+        iconSize: [22, 22], iconAnchor: [11, 11],
+      });
+      // Finish marker (red F)
+      const finishIcon = L.divIcon({
+        className: '',
+        html: '<div style="background:#c62828;color:#fff;border:2px solid #fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:0 2px 8px rgba(0,0,0,0.3)">F</div>',
+        iconSize: [22, 22], iconAnchor: [11, 11],
+      });
+      L.marker(walk.route[0], { icon: startIcon }).addTo(walkDetailMap).bindTooltip('Start');
+      L.marker(walk.route[walk.route.length - 1], { icon: finishIcon }).addTo(walkDetailMap).bindTooltip('Finish');
+
+      walkDetailMap.fitBounds(walkDetailPolyline.getBounds(), { padding: [30, 30] });
       walkDetailMap.invalidateSize();
-    }
-    walkDetailPolyline.setLatLngs(walk.route);
-    walkDetailMap.fitBounds(walkDetailPolyline.getBounds(), { padding: [24, 24] });
+    }, 120);
   } else {
     mapEl.classList.add('hidden');
   }
@@ -775,8 +938,6 @@ function openWalkModal(walk, dogs) {
   };
 
   modal.classList.remove('hidden');
-  // Invalidate map size after modal animation
-  if (hasRoute) setTimeout(() => walkDetailMap && walkDetailMap.invalidateSize(), 220);
 }
 function closeWalkModal() { document.getElementById('walk-modal').classList.add('hidden'); }
 document.getElementById('walk-modal-close').addEventListener('click', closeWalkModal);

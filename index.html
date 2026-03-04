@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PawTracker — Walk, Track, Love</title>
+  <link rel="stylesheet" href="landing.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="#">
+        <span class="brand-paw">🐾</span>
+        <span>PawTracker</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#" class="btn btn-ghost" id="nav-login-btn">Log in</a>
+        <a href="#" class="btn btn-primary-sm" id="nav-signup-btn">Get started free</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-blob blob-1"></div>
+      <div class="hero-blob blob-2"></div>
+      <div class="hero-blob blob-3"></div>
+      <div class="fp fp1">🐾</div>
+      <div class="fp fp2">🐕</div>
+      <div class="fp fp3">🦮</div>
+      <div class="fp fp4">🐾</div>
+      <div class="fp fp5">🐩</div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">🌍 Live GPS Walk Tracking</div>
+      <h1 class="hero-title">Your dog's happiest walks, <span class="highlight">tracked.</span></h1>
+      <p class="hero-sub">Real-time GPS walks, breed-smart feeding guides, and activity tracking — all free. Built for dog lovers.</p>
+      <div class="hero-cta">
+        <button class="btn btn-hero" id="hero-signup-btn">Start tracking for free 🚀</button>
+        <button class="btn btn-hero-ghost" id="hero-login-btn">I already have an account</button>
+      </div>
+      <p class="hero-note">✅ Free forever &nbsp;·&nbsp; 📍 Live GPS &nbsp;·&nbsp; 🐕 100+ breeds &nbsp;·&nbsp; 🔐 Secure login</p>
+    </div>
+    <div class="hero-mockup">
+      <div class="mockup-phone">
+        <div class="mockup-screen">
+          <div class="mock-top"><span class="mock-time">9:41</span></div>
+          <div class="mock-map">
+            <div class="mock-map-grid"></div>
+            <svg class="mock-route-svg" viewBox="0 0 180 130" fill="none">
+              <path d="M 20 110 C 40 90, 60 100, 80 70 S 120 40, 150 30" stroke="#4caf50" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="200" stroke-dashoffset="200">
+                <animate attributeName="stroke-dashoffset" from="200" to="0" dur="2.5s" fill="freeze" repeatCount="indefinite"/>
+              </path>
+              <circle cx="150" cy="30" r="6" fill="#ff9800">
+                <animate attributeName="cx" values="20;40;60;80;100;120;150" dur="2.5s" fill="freeze" repeatCount="indefinite"/>
+                <animate attributeName="cy" values="110;95;100;70;65;50;30" dur="2.5s" fill="freeze" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+            <div class="mock-label start">🏁</div>
+          </div>
+          <div class="mock-stats">
+            <div class="mock-stat"><div class="ms-val">24:07</div><div class="ms-lbl">Time</div></div>
+            <div class="mock-stat"><div class="ms-val">1.8km</div><div class="ms-lbl">Distance</div></div>
+            <div class="mock-stat"><div class="ms-val live-dot">●</div><div class="ms-lbl">Live</div></div>
+          </div>
+          <div class="mock-dog">
+            <div class="mock-dog-dot">B</div>
+            <div class="mock-dog-info">
+              <div class="mock-dog-name">Buddy</div>
+              <div class="mock-dog-breed">Goldendoodle</div>
+            </div>
+            <button class="mock-finish">Finish</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <div class="section-label">Why PawTracker?</div>
+      <h2 class="section-title">Everything your dog walk needs</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📍</div>
+          <h3>Live GPS Tracking</h3>
+          <p>Watch your exact route build on a live map as you walk. Press "Finish Walk" when done — duration, distance and route all logged automatically.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🐕</div>
+          <h3>100+ Breed Profiles</h3>
+          <p>Goldendoodles, Azawakhs, Bergamascos and more. Get breed-specific activity requirements, health notes and temperament info for your exact dog.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🍽️</div>
+          <h3>Smart Feeding Guide</h3>
+          <p>Feeding recommendations that update in real time based on how active your dog actually is this week — not just generic breed averages.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📅</div>
+          <h3>Walk Calendar</h3>
+          <p>Every walk on a monthly calendar. Spot patterns, check consistency and make sure your pup is getting enough exercise each week.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Activity Dashboard</h3>
+          <p>Total walks, hours spent, this week's activity — all at a glance. Know at a second's notice how active your dogs are.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔐</div>
+          <h3>Secure Accounts</h3>
+          <p>Your data is private and yours forever. Access your walk history and dog profiles from any device, any time.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AUTH MODAL -->
+  <div id="auth-modal" class="auth-overlay hidden">
+    <div class="auth-box">
+      <button class="auth-close" id="auth-close-btn">✕</button>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Log in</button>
+        <button class="auth-tab" data-tab="signup">Sign up</button>
+      </div>
+
+      <form id="login-form" class="auth-form">
+        <div class="auth-brand"><span>🐾</span><span>Welcome back!</span></div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="Your password" required autocomplete="current-password" />
+        </div>
+        <div id="login-error" class="auth-error hidden"></div>
+        <button type="submit" class="btn btn-form-primary" id="login-submit">
+          <span class="btn-text">Log in 🐾</span>
+          <span class="spinner hidden"></span>
+        </button>
+        <p class="auth-switch">No account? <a href="#" data-tab="signup">Sign up free →</a></p>
+      </form>
+
+      <form id="signup-form" class="auth-form hidden">
+        <div class="auth-brand"><span>🐾</span><span>Join PawTracker!</span></div>
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="signup-name" placeholder="e.g. Alex" required autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="signup-email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label>Password <span class="label-hint">(min 6 chars)</span></label>
+          <input type="password" id="signup-password" placeholder="Create a password" required minlength="6" autocomplete="new-password" />
+        </div>
+        <div id="signup-error" class="auth-error hidden"></div>
+        <div id="signup-success" class="auth-success hidden"></div>
+        <button type="submit" class="btn btn-form-primary" id="signup-submit">
+          <span class="btn-text">Create free account 🚀</span>
+          <span class="spinner hidden"></span>
+        </button>
+        <p class="auth-switch">Already have an account? <a href="#" data-tab="login">Log in →</a></p>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-brand">🐾 PawTracker</div>
+      <p class="footer-note">Free forever. No credit card needed. Made with ❤️ for dog people.</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+</body>
+</html>

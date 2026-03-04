@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PawTracker — Dashboard</title>
+  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- SIDEBAR -->
+    <nav id="sidebar">
+      <div class="brand">
+        <span class="brand-paw">🐾</span>
+        <span class="brand-name">PawTracker</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#" class="nav-link active" data-section="dashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></a></li>
+        <li><a href="#" class="nav-link" data-section="dogs"><span class="nav-icon">🐕</span><span class="nav-label">My Dogs</span></a></li>
+        <li><a href="#" class="nav-link" data-section="walk"><span class="nav-icon">🦮</span><span class="nav-label">Start Walk</span></a></li>
+        <li><a href="#" class="nav-link" data-section="calendar"><span class="nav-icon">📅</span><span class="nav-label">Calendar</span></a></li>
+        <li><a href="#" class="nav-link" data-section="history"><span class="nav-icon">📋</span><span class="nav-label">History</span></a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">🐾</div>
+          <div class="user-details">
+            <div class="user-name" id="user-name">Loading...</div>
+            <div class="user-email" id="user-email"></div>
+          </div>
+        </div>
+        <button class="logout-btn" id="logout-btn" title="Sign out">↩</button>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main id="main">
+      <header id="topbar">
+        <button id="sidebar-toggle">☰</button>
+        <h1 id="page-title">Dashboard</h1>
+        <div id="active-walk-badge" class="hidden">
+          <span class="pulse-dot"></span> Walk in progress
+        </div>
+      </header>
+
+      <!-- LOADING STATE -->
+      <div id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Loading your data...</p>
+      </div>
+
+      <!-- DASHBOARD -->
+      <section id="section-dashboard" class="section active">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🐕</div>
+            <div class="stat-value" id="stat-dogs">—</div>
+            <div class="stat-label">Dogs</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🦮</div>
+            <div class="stat-value" id="stat-walks">—</div>
+            <div class="stat-label">Total Walks</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-value" id="stat-time">—</div>
+            <div class="stat-label">Total Time</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-value" id="stat-week">—</div>
+            <div class="stat-label">This Week</div>
+          </div>
+        </div>
+        <div class="dashboard-row">
+          <div class="card flex-2">
+            <h2>Recent Walks</h2>
+            <div id="recent-walks-list"><p class="empty-msg">No walks yet — press Start Walk to begin!</p></div>
+          </div>
+          <div class="card flex-1">
+            <h2>Quick Actions</h2>
+            <button class="btn btn-primary full-width" id="quick-walk-btn">🦮 Start a Walk</button>
+            <button class="btn btn-secondary full-width mt-sm" id="quick-dog-btn">🐕 Add a Dog</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- MY DOGS -->
+      <section id="section-dogs" class="section">
+        <div class="section-hdr">
+          <h2>My Dogs</h2>
+          <button class="btn btn-primary" id="add-dog-btn">+ Add Dog</button>
+        </div>
+        <div id="dogs-grid" class="dogs-grid">
+          <p class="empty-msg">No dogs added yet.</p>
+        </div>
+      </section>
+
+      <!-- START WALK (LIVE TRACKING) -->
+      <section id="section-walk" class="section">
+        <div class="walk-layout">
+          <div class="card walk-form-card">
+            <h2>🦮 Start a Walk</h2>
+
+            <!-- Dog selector (pre-walk) -->
+            <div id="pre-walk-panel">
+              <div class="form-group">
+                <label>Select Dog *</label>
+                <select id="walk-dog-select">
+                  <option value="">Choose a dog...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Notes (optional)</label>
+                <textarea id="walk-notes-input" rows="2" placeholder="Any notes for this walk?"></textarea>
+              </div>
+              <button class="btn btn-primary full-width" id="start-walk-btn">🟢 Start Walk</button>
+            </div>
+
+            <!-- Active walk panel -->
+            <div id="active-walk-panel" class="hidden">
+              <div class="active-walk-dog" id="active-walk-dog-info"></div>
+              <div class="live-stats">
+                <div class="live-stat">
+                  <div class="live-stat-val" id="live-timer">00:00</div>
+                  <div class="live-stat-lbl">Duration</div>
+                </div>
+                <div class="live-stat">
+                  <div class="live-stat-val" id="live-dist">0.0 km</div>
+                  <div class="live-stat-lbl">Distance</div>
+                </div>
+                <div class="live-stat">
+                  <div class="live-stat-val" id="live-pts">0</div>
+                  <div class="live-stat-lbl">GPS Points</div>
+                </div>
+              </div>
+              <div class="gps-status" id="gps-status">
+                <div class="gps-dot active"></div>
+                <span>Acquiring GPS signal...</span>
+              </div>
+              <div class="form-group" style="margin-top:14px;">
+                <label>Walk Notes</label>
+                <textarea id="walk-notes-active" rows="2" placeholder="How is the walk going?"></textarea>
+              </div>
+              <button class="btn btn-finish full-width" id="finish-walk-btn">🏁 Finish Walk &amp; Save</button>
+              <button class="btn btn-outline-danger full-width mt-sm" id="cancel-walk-btn">✕ Cancel (discard)</button>
+            </div>
+          </div>
+
+          <div class="card map-card" id="map-card">
+            <div id="live-map"></div>
+            <div class="map-hint" id="map-hint">Start a walk to see your live route here</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CALENDAR -->
+      <section id="section-calendar" class="section">
+        <div class="cal-nav">
+          <button class="btn btn-icon" id="cal-prev">‹</button>
+          <h2 id="cal-title"></h2>
+          <button class="btn btn-icon" id="cal-next">›</button>
+        </div>
+        <div class="cal-day-headers">
+          <div>Sun</div><div>Mon</div><div>Tue</div>
+          <div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div id="calendar-grid" class="calendar-grid"></div>
+      </section>
+
+      <!-- HISTORY -->
+      <section id="section-history" class="section">
+        <div class="section-hdr">
+          <h2>Walk History</h2>
+          <select id="history-filter-dog" class="filter-select">
+            <option value="">All Dogs</option>
+          </select>
+        </div>
+        <div id="history-list"><p class="empty-msg">No walks logged yet.</p></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ADD / EDIT DOG MODAL -->
+  <div id="dog-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box">
+      <div class="modal-hdr">
+        <h3 id="dog-modal-title">Add Dog</h3>
+        <button class="modal-close" data-close="dog-modal">✕</button>
+      </div>
+      <form id="dog-form">
+        <input type="hidden" id="dog-id" />
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>Name *</label>
+            <input type="text" id="dog-name" required placeholder="e.g. Buddy" autocomplete="off" />
+          </div>
+          <div class="form-group" style="flex:0 0 90px;">
+            <label>Tag Colour</label>
+            <input type="color" id="dog-color" value="#4f7942" style="height:42px;padding:4px 6px;" />
+          </div>
+        </div>
+        <div class="breed-input-wrap form-group">
+          <label>Breed</label>
+          <input type="text" id="dog-breed" placeholder="Start typing a breed..." autocomplete="off" list="breed-datalist" />
+          <datalist id="breed-datalist"></datalist>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" id="dog-weight" step="0.1" min="0.5" max="120" placeholder="e.g. 25" />
+          </div>
+          <div class="form-group">
+            <label>Age (years)</label>
+            <input type="number" id="dog-age" step="0.5" min="0" max="25" placeholder="e.g. 3" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Owner Name</label>
+          <input type="text" id="dog-owner" placeholder="e.g. Sarah Smith" />
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="dog-notes" rows="2" placeholder="Special needs, favourite routes..."></textarea>
+        </div>
+        <!-- Breed info preview card -->
+        <div id="breed-info-preview" class="breed-preview hidden"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-close="dog-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Dog</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DOG DETAIL MODAL (with breed info+feeding) -->
+  <div id="dog-detail-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box modal-box-wide">
+      <div class="modal-hdr">
+        <h3 id="dog-detail-name">Dog Details</h3>
+        <button class="modal-close" data-close="dog-detail-modal">✕</button>
+      </div>
+      <div id="dog-detail-body"></div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="dog-detail-delete-btn">🗑 Delete Dog</button>
+        <button class="btn btn-secondary" id="dog-detail-edit-btn">✏️ Edit</button>
+        <button class="btn btn-secondary" data-close="dog-detail-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WALK DETAIL MODAL -->
+  <div id="walk-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box modal-box-wide">
+      <div class="modal-hdr">
+        <h3>Walk Details</h3>
+        <button class="modal-close" data-close="walk-modal">✕</button>
+      </div>
+      <div id="walk-detail-body"></div>
+      <div id="walk-route-map" class="detail-map hidden"></div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="delete-walk-btn">🗑 Delete Walk</button>
+        <button class="btn btn-secondary" data-close="walk-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR DAY MODAL -->
+  <div id="day-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-box">
+      <div class="modal-hdr">
+        <h3 id="day-modal-title"></h3>
+        <button class="modal-close" data-close="day-modal">✕</button>
+      </div>
+      <div id="day-walks-body"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" data-close="day-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="breeds.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

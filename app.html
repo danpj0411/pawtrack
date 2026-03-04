@@ -47,7 +47,7 @@
       <header id="topbar">
         <button id="sidebar-toggle">☰</button>
         <h1 id="topbar-title">Dashboard</h1>
-        <div id="active-walk-badge" class="hidden">
+        <div id="active-walk-badge" class="hidden" title="Return to active walk">
           <span class="pulse-dot"></span> Walk in progress
         </div>
       </header>
@@ -151,6 +151,9 @@
               <div class="gps-status">
                 <div class="gps-dot" id="gps-status-dot"></div>
                 <span id="gps-status-label">Waiting for GPS…</span>
+              </div>
+              <div class="form-group" style="margin-top:10px;margin-bottom:6px">
+                <textarea id="walk-notes-active" rows="2" placeholder="Add walk notes…" style="font-size:0.84rem;resize:none;"></textarea>
               </div>
               <button class="btn btn-finish full-width mt-sm" id="finish-walk-btn">🏁 Finish Walk &amp; Save</button>
               <button class="btn btn-outline-danger full-width mt-sm" id="cancel-walk-btn">✕ Cancel (discard)</button>
@@ -286,7 +289,7 @@
       </div>
       <div class="detail-notes" id="wm-notes"></div>
       <div id="walk-detail-map" class="detail-map hidden"></div>
-      <div id="wm-no-route" class="no-route-msg">📍 No route recorded for this walk</div>
+      <div id="wm-no-route" class="no-route-msg hidden">📍 No route recorded for this walk</div>
       <div class="modal-actions">
         <button class="btn btn-danger" id="wm-delete-btn">🗑 Delete Walk</button>
         <button class="btn btn-secondary" id="walk-modal-close-btn">Close</button>
@@ -308,6 +311,30 @@
       </div>
     </div>
   </div>
+
+  <!-- BOTTOM NAV (mobile only) -->
+  <nav id="bottom-nav">
+    <a href="#" class="bottom-nav-item active" data-section="dashboard">
+      <span class="bni-icon">📊</span>
+      <span class="bni-label">Home</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-section="dogs">
+      <span class="bni-icon">🐕</span>
+      <span class="bni-label">Dogs</span>
+    </a>
+    <a href="#" class="bottom-nav-item bni-center" data-section="walk">
+      <span class="bni-icon">🦮</span>
+      <span class="bni-label">Walk</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-section="calendar">
+      <span class="bni-icon">📅</span>
+      <span class="bni-label">Calendar</span>
+    </a>
+    <a href="#" class="bottom-nav-item" data-section="history">
+      <span class="bni-icon">📋</span>
+      <span class="bni-label">History</span>
+    </a>
+  </nav>
 
   <!-- TOAST -->
   <div id="toast"></div>

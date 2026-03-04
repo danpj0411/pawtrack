@@ -122,7 +122,10 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
   padding: 5px 14px; border-radius: 20px;
   font-size: 0.82rem; font-weight: 700;
   font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
 }
+#active-walk-badge:hover { background: #c8e6c9; }
 .pulse-dot {
   width: 8px; height: 8px;
   background: #4caf50; border-radius: 50%;
@@ -608,6 +611,9 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
   z-index: 9999; pointer-events: none;
   box-shadow: 0 6px 20px rgba(0,0,0,0.2);
   white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  word-break: break-word;
 }
 
 /* ==============================
@@ -659,6 +665,57 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
   .walk-layout { grid-template-columns: 1fr; }
   .live-stats { grid-template-columns: repeat(2, 1fr); }
   .detail-map { height: 320px; }
+}
+
+/* ==============================
+   BOTTOM NAV (mobile only)
+============================== */
+#bottom-nav { display: none; }
+
+@media (max-width: 700px) {
+  #bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #1a2e1a;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 400;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .bottom-nav-item {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 9px 4px 7px;
+    color: #8fb891; text-decoration: none;
+    font-family: 'Nunito', sans-serif;
+    transition: color 0.15s, background 0.15s;
+    border-radius: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-nav-item.active { color: #4caf50; }
+  .bottom-nav-item:active { background: rgba(255,255,255,0.08); }
+  .bni-icon { font-size: 1.35rem; line-height: 1; }
+  .bni-label { font-size: 0.64rem; font-weight: 700; margin-top: 3px; letter-spacing: 0.01em; }
+  /* Centre walk button is highlighted */
+  .bni-center { position: relative; }
+  .bni-center .bni-icon {
+    background: #2e7d32;
+    border-radius: 50%;
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem;
+    margin-top: -14px;
+    box-shadow: 0 4px 14px rgba(46,125,50,0.45);
+  }
+  .bottom-nav-item.active.bni-center .bni-icon { background: #1b5e20; }
+  /* Push main content above bottom nav */
+  #main { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0)); }
+  /* Toast sits above bottom nav */
+  #toast { bottom: calc(80px + env(safe-area-inset-bottom, 0)); }
+  /* Calendar cells bigger on mobile */
+  .cal-cell { min-height: 58px; }
+  .cal-walk-dot { font-size: 0.61rem; padding: 1px 4px; }
+  .cal-day-headers div { font-size: 0.7rem; }
 }
 
 /* ── Live location marker ───────────────────────────────── */

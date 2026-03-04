@@ -36,10 +36,13 @@ const sectionMap = {
 async function navigate(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(l => l.classList.remove('active'));
   const sec = document.getElementById(sectionMap[name]);
   if (sec) sec.classList.add('active');
   const link = document.querySelector(`.nav-link[data-section="${name}"]`);
   if (link) link.classList.add('active');
+  const blink = document.querySelector(`.bottom-nav-item[data-section="${name}"]`);
+  if (blink) blink.classList.add('active');
   document.getElementById('topbar-title').textContent = {
     dashboard: 'Dashboard', dogs: 'My Dogs', walk: 'Start a Walk',
     calendar: 'Calendar', history: 'Walk History'
@@ -74,6 +77,17 @@ document.getElementById('sidebar-toggle').addEventListener('click', () => {
   }
 });
 document.getElementById('sidebar-overlay').addEventListener('click', closeMobileSidebar);
+
+// Bottom nav
+document.querySelectorAll('.bottom-nav-item').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate(link.dataset.section);
+  });
+});
+
+// Tappable active-walk badge — jump back to walk screen
+document.getElementById('active-walk-badge').addEventListener('click', () => navigate('walk'));
 
 document.querySelectorAll('.nav-link').forEach(link => {
   link.addEventListener('click', () => {
@@ -725,7 +739,10 @@ document.getElementById('finish-walk-btn').addEventListener('click', async () =>
   const savedSteps = walkState.steps;
   stopWalkTracking();
 
-  const notes = document.getElementById('walk-notes-input').value.trim();
+  // Prefer notes typed during the walk; fall back to pre-walk notes
+  const activeNotes = (document.getElementById('walk-notes-active')?.value || '').trim();
+  const preNotes = (document.getElementById('walk-notes-input')?.value || '').trim();
+  const notes = activeNotes || preNotes;
   const { error } = await supabaseClient.from('walks').insert({
     user_id: currentUser.id,
     dog_id: walkState.dogId,
@@ -774,6 +791,8 @@ function resetWalkUI() {
   document.getElementById('live-pts').textContent = '0';
   document.getElementById('live-steps').textContent = '0';
   document.getElementById('walk-notes-input').value = '';
+  const activeNotesEl = document.getElementById('walk-notes-active');
+  if (activeNotesEl) activeNotesEl.value = '';
   document.getElementById('pre-walk-panel').classList.remove('hidden');
   document.getElementById('active-walk-panel').classList.add('hidden');
   document.getElementById('start-walk-btn').disabled = false;

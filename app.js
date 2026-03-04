@@ -448,25 +448,98 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && walkState.active) requestWakeLock();
 });
 
-// ── Step counter ───────────────────────────────────────────
-let _lastPeakTime = 0;
+// ── Step counter (proper pedometer) ───────────────────────
+// Uses gravity isolation + dynamic threshold + hysteresis.
+// Raw magnitude including gravity (~9.8 m/s²) is trivially
+// fooled by shaking — so we strip gravity first with a heavy
+// low-pass filter, then peak-detect only the body-motion signal.
+const _step = {
+  gravity:       { x: 0, y: 0, z: 9.81 }, // running gravity estimate
+  bodyFiltered:  0,    // smoothed body-acceleration magnitude
+  baseline:      0,    // very slow average (dynamic floor)
+  above:         false, // are we currently above the threshold?
+  lastStepTime:  0,
+  lastInterval:  600,  // most recent inter-step interval (ms), seed at 600ms
+  initialized:   false,
+};
+
 function onDeviceMotion(e) {
   if (!walkState.active) return;
-  const acc = e.accelerationIncludingGravity || e.acceleration;
-  if (!acc) return;
-  const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+
+  // Prefer acceleration WITHOUT gravity ('acceleration'); fall back to
+  // 'accelerationIncludingGravity' and strip gravity manually.
+  const raw = e.accelerationIncludingGravity;
+  if (!raw) return;
+  const rx = raw.x || 0, ry = raw.y || 0, rz = raw.z || 0;
+
+  // ── Step 1: isolate gravity with a heavy low-pass (τ ≈ 0.9 → ~1s lag) ──
+  const ga = 0.9;
+  if (!_step.initialized) {
+    _step.gravity.x = rx; _step.gravity.y = ry; _step.gravity.z = rz;
+    _step.initialized = true;
+  }
+  _step.gravity.x = ga * _step.gravity.x + (1 - ga) * rx;
+  _step.gravity.y = ga * _step.gravity.y + (1 - ga) * ry;
+  _step.gravity.z = ga * _step.gravity.z + (1 - ga) * rz;
+
+  // ── Step 2: linear (body) acceleration = raw − gravity ────────────────
+  const bx = rx - _step.gravity.x;
+  const by = ry - _step.gravity.y;
+  const bz = rz - _step.gravity.z;
+  const bodyMag = Math.sqrt(bx * bx + by * by + bz * bz);
+
+  // ── Step 3: medium LP to smooth noise (keeps 1–3 Hz walking frequencies) ─
+  const fast = 0.15;
+  _step.bodyFiltered = fast * bodyMag + (1 - fast) * _step.bodyFiltered;
+
+  // ── Step 4: very slow LP for adaptive baseline ────────────────────────
+  const slow = 0.01;
+  _step.baseline = slow * bodyMag + (1 - slow) * _step.baseline;
+
+  // ── Step 5: dynamic threshold sits above the baseline ────────────────
+  // Min floor of 1.2 m/s² ensures tiny tremors never count.
+  const threshold = Math.max(1.2, _step.baseline * 1.4);
+  // Hysteresis: must fall to 55% of threshold before the next peak counts.
+  const hysteresis = threshold * 0.55;
+
   const now = Date.now();
-  // Simple peak detector: magnitude spike above threshold, min 350ms between steps
-  if (mag > 14.5 && (now - _lastPeakTime) > 350) {
-    _lastPeakTime = now;
-    walkState.steps += 1;
-    const el = document.getElementById('live-steps');
-    if (el) el.textContent = walkState.steps;
+
+  if (!_step.above && _step.bodyFiltered > threshold) {
+    // ── Rising edge: entered the "above threshold" zone ───────────────
+    _step.above = true;
+  } else if (_step.above && _step.bodyFiltered < hysteresis) {
+    // ── Falling edge: crossed back below hysteresis — count ONE step ──
+    _step.above = false;
+    const interval = now - _step.lastStepTime;
+
+    // Plausible human step: 300 ms (sprinting) → 2 000 ms (slow shuffle)
+    if (interval >= 300 && interval <= 2000) {
+      // Extra guard: reject if current interval is > 3× the last interval
+      // (catches isolated jolts that slip through). Seed interval is 600ms.
+      if (interval < _step.lastInterval * 3.5) {
+        _step.lastStepTime = now;
+        _step.lastInterval = interval;
+        walkState.steps += 1;
+        const el = document.getElementById('live-steps');
+        if (el) el.textContent = walkState.steps;
+      }
+    } else if (interval >= 2000) {
+      // Long pause — reset cadence memory so the next step isn't rejected
+      _step.lastInterval = 600;
+      _step.lastStepTime = now;
+    }
   }
 }
+
 function startStepCounter() {
   walkState.steps = 0;
-  _lastPeakTime = 0;
+  // Reset all state
+  Object.assign(_step, {
+    gravity: { x: 0, y: 0, z: 9.81 },
+    bodyFiltered: 0, baseline: 0,
+    above: false, lastStepTime: 0,
+    lastInterval: 600, initialized: false,
+  });
   if (typeof DeviceMotionEvent === 'undefined') return;
   if (typeof DeviceMotionEvent.requestPermission === 'function') {
     // iOS 13+ requires explicit user permission
